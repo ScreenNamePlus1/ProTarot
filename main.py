@@ -19,7 +19,6 @@ from kivy.graphics import PushMatrix, PopMatrix, Rotate, Color, Rectangle
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.core.audio import SoundLoader
 from kivy.metrics import dp
 
 # Set mystical dark background
@@ -153,11 +152,6 @@ class TarotCardImage(AnimatedButton, Image):
     
     def on_press(self):
         super().on_press()
-        if self.app_instance.sound_enabled and hasattr(self.app_instance, 'flip_sound') and self.app_instance.flip_sound:
-            try:
-                self.app_instance.flip_sound.play()
-            except Exception as e:
-                Logger.error(f"Failed to play sound: {e}")
 
 class ClientManager:
     def __init__(self):
@@ -269,10 +263,8 @@ class PictureTarotApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.client_manager = ClientManager()
-        self.sound_enabled = True
         self.animation_enabled = True
         self.load_settings()
-        self.load_sounds()
     
     def load_settings(self):
         try:
@@ -280,30 +272,17 @@ class PictureTarotApp(App):
             if os.path.exists(settings_file):
                 with open(settings_file, 'r') as f:
                     settings = json.load(f)
-                    self.sound_enabled = settings.get("sound_enabled", True)
                     self.animation_enabled = settings.get("animation_enabled", True)
         except Exception as e:
             Logger.error(f"Failed to load settings: {e}")
     
     def save_settings(self):
         try:
-            settings = {"sound_enabled": self.sound_enabled, "animation_enabled": self.animation_enabled}
+            settings = {"animation_enabled": self.animation_enabled}
             with open(os.path.join(BASE_PATH, "settings.json"), 'w') as f:
                 json.dump(settings, f)
         except Exception as e:
             Logger.error(f"Failed to save settings: {e}")
-    
-    def load_sounds(self):
-        try:
-            sound_path = os.path.join(BASE_PATH, "sounds", "card_flip.wav")
-            if os.path.exists(sound_path):
-                self.flip_sound = SoundLoader.load(sound_path)
-            else:
-                self.flip_sound = None
-                Logger.warning("Sound file not found")
-        except Exception as e:
-            self.flip_sound = None
-            Logger.error(f"Failed to load sound: {e}")
     
     def build(self):
         self.icon = os.path.join(BASE_PATH, "images", "AppIcons", "transparent.png")
@@ -929,17 +908,6 @@ class PictureTarotApp(App):
         container.add_widget(header)
         
         settings_container = BoxLayout(orientation='vertical', spacing=15, size_hint_y=0.6)
-        sound_box = BoxLayout(size_hint_y=None, height=60, spacing=15)
-        sound_label = Label(
-            text="🔊 Sound Effects", font_size='18sp',
-            color=(1, 1, 1, 1), size_hint_x=0.7, halign='left'
-        )
-        sound_label.bind(size=sound_label.setter('text_size'))
-        sound_switch = Switch(active=self.sound_enabled, size_hint_x=0.3)
-        sound_switch.bind(active=self.toggle_sound)
-        sound_box.add_widget(sound_label)
-        sound_box.add_widget(sound_switch)
-        
         anim_box = BoxLayout(size_hint_y=None, height=60, spacing=15)
         anim_label = Label(
             text="✨ Animations", font_size='18sp',
@@ -951,7 +919,6 @@ class PictureTarotApp(App):
         anim_box.add_widget(anim_label)
         anim_box.add_widget(anim_switch)
         
-        settings_container.add_widget(sound_box)
         settings_container.add_widget(anim_box)
         
         client_mgmt_btn = MysticalButton("👥 Manage Clients", size_hint_y=None, height=60)
@@ -971,11 +938,6 @@ class PictureTarotApp(App):
         container.add_widget(settings_container)
         container.add_widget(info_container)
         self.main_layout.add_widget(container)
-    
-    def toggle_sound(self, instance, value):
-        self.sound_enabled = value
-        self.save_settings()
-        Logger.info(f"Sound effects {'enabled' if value else 'disabled'}")
     
     def toggle_animations(self, instance, value):
         self.animation_enabled = value
