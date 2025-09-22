@@ -1,6 +1,7 @@
 import random
 import json
 import os
+import sys
 from datetime import datetime, date
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -67,8 +68,6 @@ CARD_MEANINGS = {
     # Minor Arcana - Wands (sample entries for key cards)
     "Ace of Wands": {"upright": "Inspiration, new opportunities, growth", "reversed": "Lack of energy, delayed timing, lack of direction"},
     "King of Wands": {"upright": "Natural born leader, vision, entrepreneur", "reversed": "Impulsiveness, haste, ruthless"},
-    
-    # Add more minor arcana as needed...
 }
 
 # Add default meanings for cards not in the dictionary
@@ -239,9 +238,12 @@ class TarotCardImage(AnimatedButton, Image):
 class ClientManager:
     def __init__(self):
         # Use app's data directory for better Android compatibility
-        if hasattr(App.get_running_app(), 'user_data_dir'):
-            data_dir = App.get_running_app().user_data_dir
-        else:
+        try:
+            if hasattr(App.get_running_app(), 'user_data_dir'):
+                data_dir = App.get_running_app().user_data_dir
+            else:
+                data_dir = BASE_PATH
+        except:
             data_dir = BASE_PATH
         
         self.clients_file = os.path.join(data_dir, "clients.json")
@@ -685,265 +687,9 @@ class PictureTarotApp(App):
         """Show client management interface"""
         self.main_layout.clear_widgets()
         
-        container = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        container = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
         # Header
-        header = BoxLayout(size_hint_y=0.12)
-        back_btn = MysticalButton("← Back", size_hint_x=0.2)
-        back_btn.bind(on_press=lambda x: self.show_main_menu())
-        
-        client_name = self.client_manager.get_current_client_name()
-        title = Label(
-            text=f"📖 {client_name}'s Journal", 
-            font_size='18sp',
-            bold=True, 
-            color=(1, 1, 0.8, 1), 
-            size_hint_x=0.6
-        )
-        
-        add_btn = MysticalButton("+ New Entry", size_hint_x=0.2)
-        add_btn.bind(on_press=lambda x: self.add_journal_entry())
-        
-        header.add_widget(back_btn)
-        header.add_widget(title)
-        header.add_widget(add_btn)
-        container.add_widget(header)
-        
-        # Journal entries list
-        scroll = ScrollView()
-        journal_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
-        journal_container.bind(minimum_height=journal_container.setter('height'))
-        
-        current_client = self.client_manager.get_current_client()
-        entries = current_client.get("journal", []) if current_client else []
-        
-        if not entries:
-            no_entries = Label(
-                text=f"📝 No journal entries yet for {client_name}.\n\nStart documenting their tarot insights and progress!",
-                font_size='16sp', 
-                color=(0.7, 0.7, 0.7, 1), 
-                size_hint_y=None, 
-                height=100, 
-                halign='center'
-            )
-            no_entries.bind(size=no_entries.setter('text_size'))
-            journal_container.add_widget(no_entries)
-        else:
-            for entry in entries[:100]:  # Show last 100 entries
-                try:
-                    date_str = datetime.fromisoformat(entry["date"]).strftime("%B %d, %Y at %I:%M %p")
-                except:
-                    date_str = "Unknown date"
-                
-                entry_box = BoxLayout(
-                    orientation='vertical', 
-                    size_hint_y=None, 
-                    height=120, 
-                    padding=15, 
-                    spacing=5
-                )
-                
-                # Background styling
-                with entry_box.canvas.before:
-                    Color(0.15, 0.1, 0.25, 0.5)
-                    rect = Rectangle(pos=entry_box.pos, size=entry_box.size)
-                    entry_box.bg_rect = rect
-                
-                entry_box.bind(pos=self._update_entry_bg, size=self._update_entry_bg)
-                
-                date_label = Label(
-                    text=f"✨ {date_str}", 
-                    font_size='14sp',
-                    bold=True, 
-                    color=(1, 1, 0.8, 1), 
-                    size_hint_y=0.3, 
-                    halign='left'
-                )
-                date_label.bind(size=date_label.setter('text_size'))
-                
-                # Truncate long text for preview
-                text_content = entry.get("text", "")
-                preview_text = text_content[:200] + ("..." if len(text_content) > 200 else "")
-                
-                text_label = Label(
-                    text=preview_text,
-                    font_size='13sp', 
-                    color=(0.9, 0.9, 0.9, 1), 
-                    size_hint_y=0.7, 
-                    halign='left', 
-                    valign='top'
-                )
-                text_label.bind(size=text_label.setter('text_size'))
-                
-                entry_box.add_widget(date_label)
-                entry_box.add_widget(text_label)
-                journal_container.add_widget(entry_box)
-        
-        scroll.add_widget(journal_container)
-        container.add_widget(scroll)
-        self.main_layout.add_widget(container)
-    
-    def _update_entry_bg(self, instance, *args):
-        """Update journal entry background"""
-        if hasattr(instance, 'bg_rect'):
-            instance.bg_rect.pos = instance.pos
-            instance.bg_rect.size = instance.size
-    
-    def add_journal_entry(self):
-        """Show dialog to add new journal entry"""
-        client_name = self.client_manager.get_current_client_name()
-        
-        content = BoxLayout(orientation='vertical', spacing=15, padding=15)
-        
-        title_label = Label(
-            text=f"✍️ New Journal Entry for {client_name}", 
-            font_size='20sp',
-            bold=True, 
-            color=(1, 1, 0.8, 1), 
-            size_hint_y=0.15
-        )
-        
-        text_input = TextInput(
-            hint_text=f"Share insights, observations, or notes about {client_name}'s readings and spiritual journey...", 
-            multiline=True,
-            size_hint_y=0.6, 
-            background_color=(0.2, 0.15, 0.3, 0.8), 
-            foreground_color=(1, 1, 1, 1),
-            font_size='14sp'
-        )
-        
-        buttons = BoxLayout(size_hint_y=0.25, spacing=10)
-        save_btn = MysticalButton("💾 Save Entry")
-        cancel_btn = MysticalButton("❌ Cancel")
-        
-        buttons.add_widget(save_btn)
-        buttons.add_widget(cancel_btn)
-        
-        content.add_widget(title_label)
-        content.add_widget(text_input)
-        content.add_widget(buttons)
-        
-        popup = Popup(
-            title="", 
-            content=content, 
-            size_hint=(0.9, 0.8), 
-            background_color=(0.05, 0.05, 0.15, 0.95)
-        )
-        
-        def save_entry(*args):
-            if text_input.text.strip():
-                if self.client_manager.add_journal_entry_to_current_client(text_input.text.strip()):
-                    popup.dismiss()
-                    self.show_journal()  # Refresh the journal view
-                else:
-                    self.show_error_popup("Failed to save journal entry!")
-            else:
-                self.show_error_popup("Journal entry cannot be empty!")
-        
-        save_btn.bind(on_press=save_entry)
-        cancel_btn.bind(on_press=popup.dismiss)
-        popup.open()
-    
-    def show_settings(self):
-        """Show app settings"""
-        self.main_layout.clear_widgets()
-        
-        container = BoxLayout(orientation='vertical', padding=25, spacing=20)
-        
-        # Header
-        header = BoxLayout(size_hint_y=0.1)
-        back_btn = MysticalButton("← Back", size_hint_x=0.3)
-        back_btn.bind(on_press=lambda x: self.show_main_menu())
-        
-        title = Label(
-            text="⚙️ Settings", 
-            font_size='24sp',
-            bold=True, 
-            color=(1, 1, 0.8, 1), 
-            size_hint_x=0.7
-        )
-        
-        header.add_widget(back_btn)
-        header.add_widget(title)
-        container.add_widget(header)
-        
-        # Settings options
-        settings_container = BoxLayout(orientation='vertical', spacing=15, size_hint_y=0.6)
-        
-        # Animation toggle
-        anim_box = BoxLayout(size_hint_y=None, height=60, spacing=15)
-        anim_label = Label(
-            text="✨ Card Animations", 
-            font_size='18sp',
-            color=(1, 1, 1, 1), 
-            size_hint_x=0.7, 
-            halign='left'
-        )
-        anim_label.bind(size=anim_label.setter('text_size'))
-        
-        anim_switch = Switch(active=self.animation_enabled, size_hint_x=0.3)
-        anim_switch.bind(active=self.toggle_animations)
-        
-        anim_box.add_widget(anim_label)
-        anim_box.add_widget(anim_switch)
-        settings_container.add_widget(anim_box)
-        
-        # Client management shortcut
-        client_mgmt_btn = MysticalButton("👥 Manage Clients", size_hint_y=None, height=60)
-        client_mgmt_btn.bind(on_press=lambda x: self.show_client_manager())
-        settings_container.add_widget(client_mgmt_btn)
-        
-        # Data export/backup (placeholder for future feature)
-        data_btn = MysticalButton("💾 Export Client Data (Coming Soon)", size_hint_y=None, height=60)
-        data_btn.color = (0.6, 0.6, 0.6, 1)  # Disabled appearance
-        settings_container.add_widget(data_btn)
-        
-        container.add_widget(settings_container)
-        
-        # App info section
-        info_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=0.3)
-        
-        client_count = len(self.client_manager.clients)
-        current_client = self.client_manager.get_current_client_name()
-        
-        # Calculate total readings across all clients
-        total_readings = sum(len(client.get("readings", [])) for client in self.client_manager.clients.values())
-        total_journal_entries = sum(len(client.get("journal", [])) for client in self.client_manager.clients.values())
-        
-        app_info = Label(
-            text=f"📱 Picture Tarot v1.0\nMulti-Client Professional Edition ✨\n\n"
-                 f"👥 {client_count} clients managed\n"
-                 f"🔮 Current: {current_client}\n"
-                 f"📚 Total readings: {total_readings}\n"
-                 f"📝 Total journal entries: {total_journal_entries}\n\n"
-                 f"Perfect for tarot readers, spiritual advisors,\nand wellness practitioners serving multiple clients.",
-            font_size='14sp', 
-            color=(0.7, 0.7, 0.8, 1), 
-            halign='center'
-        )
-        app_info.bind(size=app_info.setter('text_size'))
-        
-        info_container.add_widget(app_info)
-        container.add_widget(info_container)
-        
-        self.main_layout.add_widget(container)
-    
-    def toggle_animations(self, instance, value):
-        """Toggle animation setting"""
-        self.animation_enabled = value
-        self.save_settings()
-        Logger.info(f"Animations {'enabled' if value else 'disabled'}")
-
-
-if __name__ == '__main__':
-    import sys
-    Logger.info("Starting PictureTarotApp - Multi-Client Edition")
-    try:
-        PictureTarotApp().run()
-    except Exception as e:
-        Logger.error(f"Application crashed: {e}")
-        import traceback
-        traceback.print_exc()
         header = BoxLayout(size_hint_y=0.1)
         back_btn = MysticalButton("← Back", size_hint_x=0.3)
         back_btn.bind(on_press=lambda x: self.show_main_menu())
@@ -1332,20 +1078,25 @@ if __name__ == '__main__':
         # Card image (initially showing back)
         card_back_path = self.get_card_back_path()
         if not card_back_path:
-            Logger.error("Card back image not found")
-            self.show_error_popup("Card images are missing! Please check image files.")
-            return
-        
-        self.current_card_widget = TarotCardImage(
-            card_name=card_name, 
-            orientation=orientation, 
-            app_instance=self,
-            source=card_back_path, 
-            allow_stretch=True, 
-            keep_ratio=True, 
-            size_hint=(1, 0.61)
-        )
-        self.current_card_widget.bind(on_press=self.reveal_card_with_meaning)
+            Logger.error("Card back image not found - creating placeholder")
+            # Create a simple card widget without image
+            self.current_card_widget = MysticalButton(
+                text="🎴\nTap to Reveal\n🎴",
+                size_hint=(0.8, 0.61),
+                pos_hint={'center_x': 0.5}
+            )
+            self.current_card_widget.bind(on_press=lambda x: self.reveal_card_with_meaning_text(card_name, orientation))
+        else:
+            self.current_card_widget = TarotCardImage(
+                card_name=card_name, 
+                orientation=orientation, 
+                app_instance=self,
+                source=card_back_path, 
+                allow_stretch=True, 
+                keep_ratio=True, 
+                size_hint=(1, 0.61)
+            )
+            self.current_card_widget.bind(on_press=self.reveal_card_with_meaning)
         
         # Instruction
         instruction_label = Label(
@@ -1366,9 +1117,14 @@ if __name__ == '__main__':
         
         self.main_layout.add_widget(container)
     
+    def reveal_card_with_meaning_text(self, card_name, orientation):
+        """Reveal card meaning when no images are available"""
+        meaning = get_card_meaning(card_name, orientation)
+        self.show_card_meaning_popup(card_name, orientation)
+    
     def reveal_card_with_meaning(self, instance):
         """Reveal card and show its meaning"""
-        if instance.is_revealed:
+        if hasattr(instance, 'is_revealed') and instance.is_revealed:
             self.next_card_or_complete()
             return
         
@@ -1376,11 +1132,10 @@ if __name__ == '__main__':
         card_image_path = self.get_card_image_path(instance.card_name)
         if card_image_path and os.path.exists(card_image_path):
             instance.source = card_image_path
-            instance.is_revealed = True
-            self.show_card_meaning_popup(instance.card_name, instance.orientation)
-        else:
-            Logger.error(f"Failed to load card image: {instance.card_name}")
-            self.show_error_popup(f"Card image not found: {instance.card_name}")
+            if hasattr(instance, 'is_revealed'):
+                instance.is_revealed = True
+        
+        self.show_card_meaning_popup(instance.card_name, instance.orientation)
     
     def show_card_meaning_popup(self, card_name, orientation):
         """Show popup with card meaning"""
@@ -1419,7 +1174,11 @@ if __name__ == '__main__':
             background_color=(0.1, 0.05, 0.2, 0.95)
         )
         
-        close_btn.bind(on_press=popup.dismiss)
+        def continue_reading(*args):
+            popup.dismiss()
+            self.next_card_or_complete()
+        
+        close_btn.bind(on_press=continue_reading)
         popup.open()
     
     def next_card_or_complete(self):
@@ -1670,6 +1429,261 @@ if __name__ == '__main__':
         """Show journal entries for current client"""
         self.main_layout.clear_widgets()
         
-        container = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        container = BoxLayout(orientation='vertical', padding=20, spacing=15)
         
         # Header
+        header = BoxLayout(size_hint_y=0.12)
+        back_btn = MysticalButton("← Back", size_hint_x=0.2)
+        back_btn.bind(on_press=lambda x: self.show_main_menu())
+        
+        client_name = self.client_manager.get_current_client_name()
+        title = Label(
+            text=f"📖 {client_name}'s Journal", 
+            font_size='18sp',
+            bold=True, 
+            color=(1, 1, 0.8, 1), 
+            size_hint_x=0.6
+        )
+        
+        add_btn = MysticalButton("+ New Entry", size_hint_x=0.2)
+        add_btn.bind(on_press=lambda x: self.add_journal_entry())
+        
+        header.add_widget(back_btn)
+        header.add_widget(title)
+        header.add_widget(add_btn)
+        container.add_widget(header)
+        
+        # Journal entries list
+        scroll = ScrollView()
+        journal_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
+        journal_container.bind(minimum_height=journal_container.setter('height'))
+        
+        current_client = self.client_manager.get_current_client()
+        entries = current_client.get("journal", []) if current_client else []
+        
+        if not entries:
+            no_entries = Label(
+                text=f"📝 No journal entries yet for {client_name}.\n\nStart documenting their tarot insights and progress!",
+                font_size='16sp', 
+                color=(0.7, 0.7, 0.7, 1), 
+                size_hint_y=None, 
+                height=100, 
+                halign='center'
+            )
+            no_entries.bind(size=no_entries.setter('text_size'))
+            journal_container.add_widget(no_entries)
+        else:
+            for entry in entries[:100]:  # Show last 100 entries
+                try:
+                    date_str = datetime.fromisoformat(entry["date"]).strftime("%B %d, %Y at %I:%M %p")
+                except:
+                    date_str = "Unknown date"
+                
+                entry_box = BoxLayout(
+                    orientation='vertical', 
+                    size_hint_y=None, 
+                    height=120, 
+                    padding=15, 
+                    spacing=5
+                )
+                
+                # Background styling
+                with entry_box.canvas.before:
+                    Color(0.15, 0.1, 0.25, 0.5)
+                    rect = Rectangle(pos=entry_box.pos, size=entry_box.size)
+                    entry_box.bg_rect = rect
+                
+                entry_box.bind(pos=self._update_entry_bg, size=self._update_entry_bg)
+                
+                date_label = Label(
+                    text=f"✨ {date_str}", 
+                    font_size='14sp',
+                    bold=True, 
+                    color=(1, 1, 0.8, 1), 
+                    size_hint_y=0.3, 
+                    halign='left'
+                )
+                date_label.bind(size=date_label.setter('text_size'))
+                
+                # Truncate long text for preview
+                text_content = entry.get("text", "")
+                preview_text = text_content[:200] + ("..." if len(text_content) > 200 else "")
+                
+                text_label = Label(
+                    text=preview_text,
+                    font_size='13sp', 
+                    color=(0.9, 0.9, 0.9, 1), 
+                    size_hint_y=0.7, 
+                    halign='left', 
+                    valign='top'
+                )
+                text_label.bind(size=text_label.setter('text_size'))
+                
+                entry_box.add_widget(date_label)
+                entry_box.add_widget(text_label)
+                journal_container.add_widget(entry_box)
+        
+        scroll.add_widget(journal_container)
+        container.add_widget(scroll)
+        self.main_layout.add_widget(container)
+    
+    def _update_entry_bg(self, instance, *args):
+        """Update journal entry background"""
+        if hasattr(instance, 'bg_rect'):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+    
+    def add_journal_entry(self):
+        """Show dialog to add new journal entry"""
+        client_name = self.client_manager.get_current_client_name()
+        
+        content = BoxLayout(orientation='vertical', spacing=15, padding=15)
+        
+        title_label = Label(
+            text=f"✍️ New Journal Entry for {client_name}", 
+            font_size='20sp',
+            bold=True, 
+            color=(1, 1, 0.8, 1), 
+            size_hint_y=0.15
+        )
+        
+        text_input = TextInput(
+            hint_text=f"Share insights, observations, or notes about {client_name}'s readings and spiritual journey...", 
+            multiline=True,
+            size_hint_y=0.6, 
+            background_color=(0.2, 0.15, 0.3, 0.8), 
+            foreground_color=(1, 1, 1, 1),
+            font_size='14sp'
+        )
+        
+        buttons = BoxLayout(size_hint_y=0.25, spacing=10)
+        save_btn = MysticalButton("💾 Save Entry")
+        cancel_btn = MysticalButton("❌ Cancel")
+        
+        buttons.add_widget(save_btn)
+        buttons.add_widget(cancel_btn)
+        
+        content.add_widget(title_label)
+        content.add_widget(text_input)
+        content.add_widget(buttons)
+        
+        popup = Popup(
+            title="", 
+            content=content, 
+            size_hint=(0.9, 0.8), 
+            background_color=(0.05, 0.05, 0.15, 0.95)
+        )
+        
+        def save_entry(*args):
+            if text_input.text.strip():
+                if self.client_manager.add_journal_entry_to_current_client(text_input.text.strip()):
+                    popup.dismiss()
+                    self.show_journal()  # Refresh the journal view
+                else:
+                    self.show_error_popup("Failed to save journal entry!")
+            else:
+                self.show_error_popup("Journal entry cannot be empty!")
+        
+        save_btn.bind(on_press=save_entry)
+        cancel_btn.bind(on_press=popup.dismiss)
+        popup.open()
+    
+    def show_settings(self):
+        """Show app settings"""
+        self.main_layout.clear_widgets()
+        
+        container = BoxLayout(orientation='vertical', padding=25, spacing=20)
+        
+        # Header
+        header = BoxLayout(size_hint_y=0.1)
+        back_btn = MysticalButton("← Back", size_hint_x=0.3)
+        back_btn.bind(on_press=lambda x: self.show_main_menu())
+        
+        title = Label(
+            text="⚙️ Settings", 
+            font_size='24sp',
+            bold=True, 
+            color=(1, 1, 0.8, 1), 
+            size_hint_x=0.7
+        )
+        
+        header.add_widget(back_btn)
+        header.add_widget(title)
+        container.add_widget(header)
+        
+        # Settings options
+        settings_container = BoxLayout(orientation='vertical', spacing=15, size_hint_y=0.6)
+        
+        # Animation toggle
+        anim_box = BoxLayout(size_hint_y=None, height=60, spacing=15)
+        anim_label = Label(
+            text="✨ Card Animations", 
+            font_size='18sp',
+            color=(1, 1, 1, 1), 
+            size_hint_x=0.7, 
+            halign='left'
+        )
+        anim_label.bind(size=anim_label.setter('text_size'))
+        
+        anim_switch = Switch(active=self.animation_enabled, size_hint_x=0.3)
+        anim_switch.bind(active=self.toggle_animations)
+        
+        anim_box.add_widget(anim_label)
+        anim_box.add_widget(anim_switch)
+        settings_container.add_widget(anim_box)
+        
+        # Client management shortcut
+        client_mgmt_btn = MysticalButton("👥 Manage Clients", size_hint_y=None, height=60)
+        client_mgmt_btn.bind(on_press=lambda x: self.show_client_manager())
+        settings_container.add_widget(client_mgmt_btn)
+        
+        # Data export/backup (placeholder for future feature)
+        data_btn = MysticalButton("💾 Export Client Data (Coming Soon)", size_hint_y=None, height=60)
+        data_btn.color = (0.6, 0.6, 0.6, 1)  # Disabled appearance
+        settings_container.add_widget(data_btn)
+        
+        container.add_widget(settings_container)
+        
+        # App info section
+        info_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=0.3)
+        
+        client_count = len(self.client_manager.clients)
+        current_client = self.client_manager.get_current_client_name()
+        
+        # Calculate total readings across all clients
+        total_readings = sum(len(client.get("readings", [])) for client in self.client_manager.clients.values())
+        total_journal_entries = sum(len(client.get("journal", [])) for client in self.client_manager.clients.values())
+        
+        app_info = Label(
+            text=f"📱 Picture Tarot v1.0\nMulti-Client Professional Edition ✨\n\n"
+                 f"👥 {client_count} clients managed\n"
+                 f"🔮 Current: {current_client}\n"
+                 f"📚 Total readings: {total_readings}\n"
+                 f"📝 Total journal entries: {total_journal_entries}\n\n"
+                 f"Perfect for tarot readers, spiritual advisors,\nand wellness practitioners serving multiple clients.",
+            font_size='14sp', 
+            color=(0.7, 0.7, 0.8, 1), 
+            halign='center'
+        )
+        app_info.bind(size=app_info.setter('text_size'))
+        
+        info_container.add_widget(app_info)
+        container.add_widget(info_container)
+        
+        self.main_layout.add_widget(container)
+    
+    def toggle_animations(self, instance, value):
+        """Toggle animation setting"""
+        self.animation_enabled = value
+        self.save_settings()
+        Logger.info(f"Animations {'enabled' if value else 'disabled'}")
+
+
+if __name__ == '__main__':
+    Logger.info("Starting PictureTarotApp - Multi-Client Edition")
+    try:
+        PictureTarotApp().run()
+    except Exception as e:
+        Logger.error(f"Application crashed: {e}")
+        import traceback
+        traceback.print_exc()
