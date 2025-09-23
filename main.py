@@ -101,7 +101,6 @@ CARD_MEANINGS = {
 }
 
 def get_card_meaning(card_name, orientation):
-    """Get card meaning with fallback for missing cards"""
     try:
         meanings = CARD_MEANINGS.get(card_name, {})
         if orientation.lower() in meanings:
@@ -551,9 +550,9 @@ class PictureTarotApp(App):
                 if any(os.path.exists(os.path.join(path, test_file)) for test_file in test_files):
                     Logger.info(f"Found card images at: {path}")
                     return path
-                log_error("PictureTarot", "No valid image path found")
-                Logger.warning("No valid image path found, using BASE_PATH")
-                return BASE_PATH
+            log_error("PictureTarot", "No valid image path found")
+            Logger.warning("No valid image path found, using BASE_PATH")
+            return BASE_PATH
         except Exception as e:
             log_error("PictureTarot", "Error finding image base path", e)
             return BASE_PATH
@@ -1170,7 +1169,7 @@ class PictureTarotApp(App):
             message.bind(size=message.setter('text_size'))
             options_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=0.5)
             journal_btn = MysticalButton("📝 Add Journal Entry")
-            journal_btn.bind(on_press=lambda x: self.quick_journal_entry())
+            journal_btn.bind(on_press=lambda x: self.show_journal_entry())
             history_btn = MysticalButton("📚 View Reading History")
             history_btn.bind(on_press=lambda x: self.show_history())
             switch_btn = MysticalButton("👥 Switch Client")
@@ -1192,7 +1191,7 @@ class PictureTarotApp(App):
             log_error("PictureTarot", "Error showing reading complete screen", e)
             self.show_error_popup(f"Error displaying reading complete: {str(e)}")
     
-    def quick_journal_entry(self):
+    def show_journal_entry(self):
         try:
             client_name = self.client_manager.get_current_client_name()
             content = BoxLayout(orientation='vertical', spacing=10, padding=10)
@@ -1237,7 +1236,7 @@ class PictureTarotApp(App):
             cancel_btn.bind(on_press=popup.dismiss)
             popup.open()
         except Exception as e:
-            log_error("PictureTarot", "Error showing quick journal entry", e)
+            log_error("PictureTarot", "Error showing journal entry", e)
             self.show_error_popup(f"Error displaying journal entry: {str(e)}")
     
     def show_history(self):
@@ -1255,4 +1254,219 @@ class PictureTarotApp(App):
                 size_hint_x=0.5
             )
             client_info = Label(
-                text=f"👤 {self.client
+                text=f"👤 {self.client_manager.get_current_client_name()}", 
+                font_size='14sp', 
+                color=(0.8, 1, 0.8, 1), 
+                size_hint_x=0.25
+            )
+            header.add_widget(back_btn)
+            header.add_widget(title)
+            header.add_widget(client_info)
+            container.add_widget(header)
+            scroll = ScrollView()
+            history_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
+            history_container.bind(minimum_height=history_container.setter('height'))
+            client = self.client_manager.get_current_client()
+            readings = client.get("readings", []) if client else []
+            if not readings:
+                empty_label = Label(
+                    text="No readings yet for this client.",
+                    font_size='16sp',
+                    color=(0.9, 0.9, 0.9, 1),
+                    size_hint_y=None,
+                    height=dp(50),
+                    halign='center'
+                )
+                empty_label.bind(size=empty_label.setter('text_size'))
+                history_container.add_widget(empty_label)
+            else:
+                for reading in readings:
+                    reading_layout = BoxLayout(
+                        orientation='vertical',
+                        size_hint_y=None,
+                        height=dp(100),
+                        padding=5,
+                        spacing=5
+                    )
+                    with reading_layout.canvas.before:
+                        Color(0.15, 0.1, 0.25, 0.7)
+                        rect = Rectangle(pos=reading_layout.pos, size=reading_layout.size)
+                        reading_layout.bg_rect = rect
+                    reading_layout.bind(pos=self._update_spread_bg, size=self._update_spread_bg)
+                    date_label = Label(
+                        text=f"Date: {reading['date'][:10]}",
+                        font_size='16sp',
+                        color=(1, 1, 1, 1),
+                        size_hint_y=0.3,
+                        halign='left'
+                    )
+                    date_label.bind(size=date_label.setter('text_size'))
+                    spread_label = Label(
+                        text=f"Spread: {reading['spread']}",
+                        font_size='14sp',
+                        color=(0.9, 0.9, 0.9, 1),
+                        size_hint_y=0.3,
+                        halign='left'
+                    )
+                    spread_label.bind(size=spread_label.setter('text_size'))
+                    cards = ", ".join([f"{c} ({o})" for c, o in zip(reading['cards'], reading['orientations'])])
+                    cards_label = Label(
+                        text=f"Cards: {cards}",
+                        font_size='12sp',
+                        color=(0.8, 0.8, 0.8, 1),
+                        size_hint_y=0.4,
+                        halign='left'
+                    )
+                    cards_label.bind(size=cards_label.setter('text_size'))
+                    reading_layout.add_widget(date_label)
+                    reading_layout.add_widget(spread_label)
+                    reading_layout.add_widget(cards_label)
+                    history_container.add_widget(reading_layout)
+            scroll.add_widget(history_container)
+            container.add_widget(scroll)
+            self.main_layout.add_widget(container)
+        except Exception as e:
+            log_error("PictureTarot", "Error showing reading history", e)
+            self.show_error_popup(f"Error displaying reading history: {str(e)}")
+
+    def show_journal(self):
+        try:
+            self.main_layout.clear_widgets()
+            container = BoxLayout(orientation='vertical', padding=20, spacing=10)
+            header = BoxLayout(size_hint_y=0.12)
+            back_btn = MysticalButton("← Back", size_hint_x=0.25)
+            back_btn.bind(on_press=lambda x: self.show_main_menu())
+            title = Label(
+                text="✍️ Client Journal",
+                font_size='20sp',
+                bold=True,
+                color=(1, 1, 0.8, 1),
+                size_hint_x=0.5
+            )
+            client_info = Label(
+                text=f"👤 {self.client_manager.get_current_client_name()}",
+                font_size='14sp',
+                color=(0.8, 1, 0.8, 1),
+                size_hint_x=0.25
+            )
+            header.add_widget(back_btn)
+            header.add_widget(title)
+            header.add_widget(client_info)
+            container.add_widget(header)
+            scroll = ScrollView()
+            journal_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
+            journal_container.bind(minimum_height=journal_container.setter('height'))
+            client = self.client_manager.get_current_client()
+            journal_entries = client.get("journal", []) if client else []
+            if not journal_entries:
+                empty_label = Label(
+                    text="No journal entries yet for this client.",
+                    font_size='16sp',
+                    color=(0.9, 0.9, 0.9, 1),
+                    size_hint_y=None,
+                    height=dp(50),
+                    halign='center'
+                )
+                empty_label.bind(size=empty_label.setter('text_size'))
+                journal_container.add_widget(empty_label)
+            else:
+                for entry in journal_entries:
+                    entry_layout = BoxLayout(
+                        orientation='vertical',
+                        size_hint_y=None,
+                        height=dp(100),
+                        padding=5,
+                        spacing=5
+                    )
+                    with entry_layout.canvas.before:
+                        Color(0.15, 0.1, 0.25, 0.7)
+                        rect = Rectangle(pos=entry_layout.pos, size=entry_layout.size)
+                        entry_layout.bg_rect = rect
+                    entry_layout.bind(pos=self._update_spread_bg, size=self._update_spread_bg)
+                    date_label = Label(
+                        text=f"Date: {entry['date'][:10]}",
+                        font_size='16sp',
+                        color=(1, 1, 1, 1),
+                        size_hint_y=0.3,
+                        halign='left'
+                    )
+                    date_label.bind(size=date_label.setter('text_size'))
+                    text_label = Label(
+                        text=entry['text'],
+                        font_size='14sp',
+                        color=(0.9, 0.9, 0.9, 1),
+                        size_hint_y=0.7,
+                        halign='left',
+                        text_size=(entry_layout.width - 10, None)
+                    )
+                    text_label.bind(size=text_label.setter('text_size'))
+                    entry_layout.add_widget(date_label)
+                    entry_layout.add_widget(text_label)
+                    journal_container.add_widget(entry_layout)
+            scroll.add_widget(journal_container)
+            container.add_widget(scroll)
+            add_entry_btn = MysticalButton("➕ Add New Journal Entry", size_hint_y=0.1)
+            add_entry_btn.bind(on_press=lambda x: self.show_journal_entry())
+            container.add_widget(add_entry_btn)
+            self.main_layout.add_widget(container)
+        except Exception as e:
+            log_error("PictureTarot", "Error showing journal", e)
+            self.show_error_popup(f"Error displaying journal: {str(e)}")
+
+    def show_settings(self):
+        try:
+            self.main_layout.clear_widgets()
+            container = BoxLayout(orientation='vertical', padding=20, spacing=10)
+            header = BoxLayout(size_hint_y=0.12)
+            back_btn = MysticalButton("← Back", size_hint_x=0.25)
+            back_btn.bind(on_press=lambda x: self.show_main_menu())
+            title = Label(
+                text="⚙️ Settings",
+                font_size='20sp',
+                bold=True,
+                color=(1, 1, 0.8, 1),
+                size_hint_x=0.75
+            )
+            header.add_widget(back_btn)
+            header.add_widget(title)
+            container.add_widget(header)
+            settings_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=0.88)
+            animation_layout = BoxLayout(size_hint_y=0.2, spacing=10)
+            animation_label = Label(
+                text="Enable Animations",
+                font_size='16sp',
+                color=(1, 1, 1, 1),
+                size_hint_x=0.7,
+                halign='left'
+            )
+            animation_label.bind(size=animation_label.setter('text_size'))
+            animation_switch = Switch(active=self.animation_enabled)
+            animation_switch.bind(active=self.on_animation_toggle)
+            animation_layout.add_widget(animation_label)
+            animation_layout.add_widget(animation_switch)
+            settings_layout.add_widget(animation_layout)
+            container.add_widget(settings_layout)
+            self.main_layout.add_widget(container)
+        except Exception as e:
+            log_error("PictureTarot", "Error showing settings", e)
+            self.show_error_popup(f"Error displaying settings: {str(e)}")
+
+    def on_animation_toggle(self, instance, value):
+        try:
+            self.animation_enabled = value
+            self.save_settings()
+            Logger.info(f"Animations {'enabled' if value else 'disabled'}")
+        except Exception as e:
+            log_error("PictureTarot", "Error toggling animation setting", e)
+            self.show_error_popup(f"Error saving settings: {str(e)}")
+
+if __name__ == '__main__':
+    Logger.info("Starting PictureTarotApp - Multi-Client Edition")
+    log_file = setup_logging()
+    sys.excepthook = custom_exception_handler
+    try:
+        PictureTarotApp().run()
+    except Exception as e:
+        log_error("PictureTarot", f"Application crashed: {str(e)}")
+        Logger.error(f"Application crashed: {e}")
+        traceback.print_exc()
