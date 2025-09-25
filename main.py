@@ -170,18 +170,18 @@ class MysticalButton(Button):
         kwargs.setdefault('font_size', '16sp')
         kwargs.setdefault('bold', True)
         kwargs.setdefault('size_hint_y', None)
-        kwargs.setdefault('height', dp(50))
+        kwargs.setdefault('height', dp(60))
         super().__init__(text=text, **kwargs)
         try:
             with self.canvas.before:
-                Color(0.4, 0.2, 0.6, 0.8)
+                Color(0.1, 0.1, 0.2, 0.9)
                 self.border = Rectangle(pos=self.pos, size=self.size)
                 Color(0.15, 0.05, 0.25, 0.9)
                 self.inner_rect = Rectangle(pos=(self.x + 2, self.y + 2), size=(self.width - 4, self.height - 4))
             self.bind(pos=self._update_graphics, size=self._update_graphics)
         except Exception as e:
             log_error("MysticalButton", "Error initializing button graphics", e)
-    
+
     def _update_graphics(self, *args):
         try:
             self.border.pos = self.pos
@@ -211,7 +211,7 @@ class AnimatedButton(ButtonBehavior, FloatLayout):
         super().__init__(**kwargs)
         self.original_size = None
         self.animation_running = False
-    
+
     def on_press(self):
         try:
             if self.animation_running:
@@ -241,7 +241,7 @@ class TarotCardImage(AnimatedButton, Image):
                 self._apply_rotation()
         except Exception as e:
             log_error("TarotCardImage", f"Error initializing card {card_name}", e)
-    
+
     def _apply_rotation(self):
         try:
             with self.canvas.before:
@@ -252,7 +252,7 @@ class TarotCardImage(AnimatedButton, Image):
             self.bind(pos=self._update_rotation, size=self._update_rotation)
         except Exception as e:
             log_error("TarotCardImage", f"Error applying rotation to {self.card_name}", e)
-    
+
     def _update_rotation(self, *args):
         try:
             if self.orientation == "Reversed":
@@ -282,7 +282,7 @@ class ClientManager:
         self.load_clients()
         if not self.clients:
             self.add_client("Personal", "Your personal readings", is_default=True)
-    
+
     def load_clients(self):
         try:
             if os.path.exists(self.clients_file):
@@ -305,7 +305,7 @@ class ClientManager:
             Logger.error(f"Unexpected error loading clients: {e}")
             self.clients = {}
             self.current_client_id = None
-    
+
     def save_clients(self):
         try:
             os.makedirs(os.path.dirname(self.clients_file), exist_ok=True)
@@ -327,7 +327,7 @@ class ClientManager:
                     os.remove(temp_file)
                 except:
                     pass
-    
+
     def add_client(self, name, description="", is_default=False):
         try:
             if not name or not name.strip():
@@ -363,7 +363,7 @@ class ClientManager:
         except Exception as e:
             log_error("ClientManager", f"Error adding client {name}", e)
             return None
-    
+
     def get_current_client(self):
         try:
             if not self.current_client_id or self.current_client_id not in self.clients:
@@ -372,7 +372,7 @@ class ClientManager:
         except Exception as e:
             log_error("ClientManager", "Error getting current client", e)
             return None
-    
+
     def get_current_client_name(self):
         try:
             client = self.get_current_client()
@@ -380,7 +380,7 @@ class ClientManager:
         except Exception as e:
             log_error("ClientManager", "Error getting current client name", e)
             return "No Client Selected"
-    
+
     def switch_client(self, client_id):
         try:
             if client_id in self.clients:
@@ -393,7 +393,7 @@ class ClientManager:
         except Exception as e:
             log_error("ClientManager", f"Error switching to client {client_id}", e)
             return False
-    
+
     def add_reading_to_current_client(self, spread_name, cards, orientations, notes=""):
         try:
             if not self.current_client_id:
@@ -418,7 +418,7 @@ class ClientManager:
         except Exception as e:
             log_error("ClientManager", f"Error adding reading {spread_name}", e)
             return False
-    
+
     def add_journal_entry_to_current_client(self, entry_text):
         try:
             if not self.current_client_id:
@@ -440,7 +440,7 @@ class ClientManager:
         except Exception as e:
             log_error("ClientManager", "Error adding journal entry", e)
             return False
-    
+
     def check_daily_reading_done(self, spread_name="Daily Guidance"):
         try:
             if not self.current_client_id:
@@ -454,7 +454,7 @@ class ClientManager:
         except Exception as e:
             log_error("ClientManager", f"Error checking daily reading for {spread_name}", e)
             return False
-    
+
     def delete_client(self, client_id):
         try:
             if client_id not in self.clients:
@@ -490,7 +490,7 @@ class PictureTarotApp(App):
             self.current_card_widget = None
         except Exception as e:
             log_error("PictureTarot", "Error initializing app", e)
-    
+
     def load_settings(self):
         try:
             settings_file = os.path.join(self.user_data_dir, "settings.json")
@@ -503,7 +503,7 @@ class PictureTarotApp(App):
             log_error("PictureTarot", f"Failed to load settings: {str(e)}")
             Logger.error(f"Failed to load settings: {e}")
             self.animation_enabled = True
-    
+
     def save_settings(self):
         try:
             os.makedirs(self.user_data_dir, exist_ok=True)
@@ -515,7 +515,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", f"Failed to save settings: {str(e)}")
             Logger.error(f"Failed to save settings: {e}")
-    
+
     def build(self):
         log_file = setup_logging()
         if not log_file:
@@ -535,7 +535,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error building main app", e)
             raise
-    
+
     def get_image_base_path(self):
         try:
             possible_paths = [
@@ -556,7 +556,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error finding image base path", e)
             return BASE_PATH
-    
+
     def get_card_image_path(self, card_name):
         try:
             base_path = self.get_image_base_path()
@@ -579,7 +579,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", f"Error getting card image path for {card_name}", e)
             return self.get_card_back_path()
-    
+
     def get_card_back_path(self):
         try:
             base_path = self.get_image_base_path()
@@ -595,7 +595,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error getting card back path", e)
             return None
-    
+
     def show_error_popup(self, message):
         try:
             content = BoxLayout(orientation='vertical', spacing=10, padding=15)
@@ -622,7 +622,7 @@ class PictureTarotApp(App):
             popup.open()
         except Exception as e:
             log_error("PictureTarot", f"Error showing popup: {message}", e)
-    
+
     def show_main_menu(self):
         try:
             self.main_layout.clear_widgets()
@@ -631,8 +631,8 @@ class PictureTarotApp(App):
                 Rectangle(pos=(0, 0), size=Window.size)
             container = BoxLayout(
                 orientation='vertical', 
-                padding=20, 
-                spacing=15,
+                padding=dp(30), 
+                spacing=dp(25),
                 size_hint=(0.95, 0.95), 
                 pos_hint={'center_x': 0.5, 'center_y': 0.5}
             )
@@ -656,7 +656,7 @@ class PictureTarotApp(App):
             client_header.add_widget(add_client_btn)
             title = Label(
                 text="✦ PICTURE TAROT ✦", 
-                font_size='32sp',
+                font_size='28sp',
                 bold=True, 
                 color=(1, 1, 0.8, 1), 
                 size_hint_y=0.12
@@ -674,18 +674,20 @@ class PictureTarotApp(App):
             for text, callback, enabled in menu_options:
                 if "Daily" in text and not enabled:
                     display_text = f"{text} ✅ (Done Today)"
-                    btn = MysticalButton(display_text, size_hint_y=0.12)
+                    btn = MysticalButton(display_text, size_hint_y=0.1)
                     btn.color = (0.7, 0.7, 0.7, 1)
                 else:
-                    btn = MysticalButton(text, size_hint_y=0.12)
+                    btn = MysticalButton(text, size_hint_y=0.1)
                     if enabled:
                         btn.bind(on_press=callback)
                 container.add_widget(btn)
-            self.main_layout.add_widget(container)
+            scroll = ScrollView()
+            scroll.add_widget(container)
+            self.main_layout.add_widget(scroll)
         except Exception as e:
             log_error("PictureTarot", "Error showing main menu", e)
             self.show_error_popup(f"Error displaying main menu: {str(e)}")
-    
+
     def show_client_manager(self):
         try:
             self.main_layout.clear_widgets()
@@ -747,7 +749,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error showing client manager", e)
             self.show_error_popup(f"Error displaying client manager: {str(e)}")
-    
+
     def switch_to_client(self, client_id):
         try:
             if self.client_manager.switch_client(client_id):
@@ -757,7 +759,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", f"Error switching to client {client_id}", e)
             self.show_error_popup(f"Error switching client: {str(e)}")
-    
+
     def add_new_client(self):
         try:
             content = BoxLayout(orientation='vertical', spacing=15, padding=15)
@@ -818,7 +820,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error adding new client", e)
             self.show_error_popup(f"Error adding client: {str(e)}")
-    
+
     def confirm_delete_client(self, client_id):
         try:
             client_name = self.client_manager.clients[client_id]["name"]
@@ -855,7 +857,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", f"Error confirming deletion of client {client_id}", e)
             self.show_error_popup(f"Error deleting client: {str(e)}")
-    
+
     def start_daily_reading(self):
         try:
             if not self.client_manager.current_client_id:
@@ -868,7 +870,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error starting daily reading", e)
             self.show_error_popup(f"Error starting daily reading: {str(e)}")
-    
+
     def show_spreads_menu(self):
         try:
             self.main_layout.clear_widgets()
@@ -940,7 +942,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error showing spreads menu", e)
             self.show_error_popup(f"Error displaying spreads menu: {str(e)}")
-    
+
     def _update_spread_bg(self, instance, *args):
         try:
             if hasattr(instance, 'bg_rect'):
@@ -948,7 +950,7 @@ class PictureTarotApp(App):
                 instance.bg_rect.size = instance.size
         except Exception as e:
             log_error("PictureTarot", "Error updating spread background", e)
-    
+
     def start_reading(self, num_cards, spread_name, special=False):
         if not self.client_manager.current_client_id:
             self.show_error_popup("Please select a client first!")
@@ -972,7 +974,7 @@ class PictureTarotApp(App):
             log_error("PictureTarot", f"Failed to start reading: {str(e)}")
             Logger.error(f"Failed to start reading: {e}")
             self.show_error_popup(f"Failed to start reading: {str(e)}")
-    
+
     def show_card_with_position(self):
         if self.card_index >= len(self.current_cards):
             Logger.warning("Card index out of range")
@@ -1055,7 +1057,7 @@ class PictureTarotApp(App):
             log_error("PictureTarot", f"Error showing card with position: {card_name}", e)
             Logger.error(f"Error showing card with position: {e}")
             self.show_error_popup(f"Error displaying card: {str(e)}")
-    
+
     def reveal_card_with_meaning_text(self, card_name, orientation):
         try:
             meaning = get_card_meaning(card_name, orientation)
@@ -1063,7 +1065,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", f"Error revealing card text for {card_name}", e)
             self.show_error_popup(f"Error revealing card: {str(e)}")
-    
+
     def reveal_card_with_meaning(self, instance):
         try:
             if hasattr(instance, 'is_revealed') and instance.is_revealed:
@@ -1078,7 +1080,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", f"Error revealing card {instance.card_name}", e)
             self.show_error_popup(f"Error revealing card: {str(e)}")
-    
+
     def show_card_meaning_popup(self, card_name, orientation):
         try:
             meaning = get_card_meaning(card_name, orientation)
@@ -1117,7 +1119,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", f"Error showing card meaning popup for {card_name}", e)
             self.show_error_popup(f"Error displaying card meaning: {str(e)}")
-    
+
     def next_card_or_complete(self):
         try:
             self.card_index += 1
@@ -1128,7 +1130,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error proceeding to next card", e)
             self.show_error_popup(f"Error proceeding to next card: {str(e)}")
-    
+
     def complete_reading(self):
         try:
             success = self.client_manager.add_reading_to_current_client(
@@ -1144,7 +1146,7 @@ class PictureTarotApp(App):
             log_error("PictureTarot", f"Error completing reading: {str(e)}")
             Logger.error(f"Error completing reading: {e}")
             self.show_error_popup(f"Error completing reading: {str(e)}")
-    
+
     def show_reading_complete(self):
         try:
             self.main_layout.clear_widgets()
@@ -1190,7 +1192,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error showing reading complete screen", e)
             self.show_error_popup(f"Error displaying reading complete: {str(e)}")
-    
+
     def show_journal_entry(self):
         try:
             client_name = self.client_manager.get_current_client_name()
@@ -1238,7 +1240,7 @@ class PictureTarotApp(App):
         except Exception as e:
             log_error("PictureTarot", "Error showing journal entry", e)
             self.show_error_popup(f"Error displaying journal entry: {str(e)}")
-    
+
     def show_history(self):
         try:
             self.main_layout.clear_widgets()
